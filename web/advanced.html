@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKX WebSocket 高级客户端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .control-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .status-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #495057;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connecting { background-color: #ffc107; }
+        .status-connected { background-color: #28a745; }
+        .status-disconnected { background-color: #dc3545; }
+        .status-error { background-color: #fd7e14; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .log-container {
+            grid-column: 1 / -1;
+            margin-top: 30px;
+        }
+        
+        .log {
+            background: #1e1e1e;
+            color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-timestamp {
+            color: #6c757d;
+            margin-right: 10px;
+        }
+        
+        .log-info { color: #17a2b8; }
+        .log-success { color: #28a745; }
+        .log-warning { color: #ffc107; }
+        .log-error { color: #dc3545; }
+        
+        .subscription-list {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .subscription-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        
+        .subscription-item:last-child {
+            border-bottom: none;
+        }
+        
+        .subscription-text {
+            flex: 1;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .remove-subscription {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 OKX WebSocket 高级客户端</h1>
+            <p>专业级 WebSocket 连接测试和调试工具</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="control-panel">
+                <h2 class="section-title">连接控制</h2>
+                
+                <div class="form-group">
+                    <label for="wsUrl">WebSocket URL</label>
+                    <input type="text" id="wsUrl" 
+                           value="wss://wspap.okx.com:8443/ws/v5/public?brokerId=9999">
+                </div>
+                
+                <div class="form-group">
+                    <label for="maxReconnects">最大重连次数</label>
+                    <input type="number" id="maxReconnects" value="10" min="0" max="100">
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" id="connectBtn" onclick="connect()">
+                        连接
+                    </button>
+                    <button class="btn btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>
+                        断开
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearLog()">
+                        清空日志
+                    </button>
+                </div>
+                
+                <h3 class="section-title" style="margin-top: 30px;">订阅管理</h3>
+                
+                <div class="form-group">
+                    <label for="channel">频道</label>
+                    <select id="channel">
+                        <option value="tickers">Tickers (价格)</option>
+                        <option value="books">Books (深度)</option>
+                        <option value="trades">Trades (交易)</option>
+                        <option value="candle1m">Candle 1m (K线)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="instId">交易对</label>
+                    <input type="text" id="instId" value="BTC-USDT" placeholder="例如: BTC-USDT">
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="subscribe()">
+                        订阅
+                    </button>
+                    <button class="btn btn-secondary" onclick="unsubscribe()">
+                        取消订阅
+                    </button>
+                </div>
+                
+                <div class="subscription-list" id="subscriptionList">
+                    <!-- 订阅列表将在这里显示 -->
+                </div>
+            </div>
+            
+            <div class="status-panel">
+                <h2 class="section-title">连接状态</h2>
+                
+                <div id="connectionStatus">
+                    <span class="status-indicator status-disconnected"></span>
+                    <span id="statusText">未连接</span>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="messageCount">0</div>
+                        <div class="stat-label">消息数量</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="reconnectCount">0</div>
+                        <div class="stat-label">重连次数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="uptime">0s</div>
+                        <div class="stat-label">连接时长</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="health">❌</div>
+                        <div class="stat-label">连接健康</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="log-container">
+                <h2 class="section-title">实时日志</h2>
+                <div class="log" id="log"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="advanced-client.js"></script>
+    <script>
+        let okxClient = null;
+        let statsInterval = null;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span>${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateStatus(status, className) {
+            const indicator = document.querySelector('.status-indicator');
+            const statusText = document.getElementById('statusText');
+            
+            indicator.className = `status-indicator status-${className}`;
+            statusText.textContent = status;
+        }
+        
+        function updateStats() {
+            if (!okxClient) return;
+            
+            const stats = okxClient.getStats();
+            document.getElementById('messageCount').textContent = stats.messageCount;
+            document.getElementById('reconnectCount').textContent = stats.reconnectCount;
+            document.getElementById('uptime').textContent = Math.floor(stats.uptime / 1000) + 's';
+            document.getElementById('health').textContent = okxClient.isHealthy() ? '✅' : '❌';
+        }
+        
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            const maxReconnects = parseInt(document.getElementById('maxReconnects').value);
+            
+            if (okxClient) {
+                okxClient.close();
+            }
+            
+            okxClient = new OKXWebSocketClient({
+                url: url,
+                maxReconnectAttempts: maxReconnects
+            });
+            
+            // 设置事件监听器
+            okxClient.addEventListener('connecting', (data) => {
+                log(`正在连接... (第${data.attempt}次尝试)`, 'info');
+                updateStatus('正在连接...', 'connecting');
+                document.getElementById('connectBtn').disabled = true;
+            });
+            
+            okxClient.addEventListener('open', (data) => {
+                log('✅ WebSocket 连接成功!', 'success');
+                updateStatus('已连接', 'connected');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = false;
+                
+                if (data.reconnectCount > 0) {
+                    log(`🔄 重连成功 (第${data.reconnectCount}次重连)`, 'success');
+                }
+            });
+            
+            okxClient.addEventListener('close', (data) => {
+                log(`❌ 连接已关闭 (代码: ${data.code}, 原因: ${data.reason})`, 'warning');
+                updateStatus('连接已断开', 'disconnected');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+            });
+            
+            okxClient.addEventListener('message', (data) => {
+                try {
+                    const message = JSON.parse(data.data);
+                    if (message.event !== 'pong') {
+                        log(`📨 收到消息: ${JSON.stringify(message, null, 2)}`, 'success');
+                    }
+                } catch (error) {
+                    log(`📨 收到数据: ${data.data}`, 'info');
+                }
+            });
+            
+            okxClient.addEventListener('error', (data) => {
+                log(`❌ 错误: ${data.message || data.error}`, 'error');
+                updateStatus('连接错误', 'error');
+            });
+            
+            // 开始统计更新
+            if (statsInterval) {
+                clearInterval(statsInterval);
+            }
+            statsInterval = setInterval(updateStats, 1000);
+        }
+        
+        function disconnect() {
+            if (okxClient) {
+                okxClient.close();
+                okxClient = null;
+            }
+            
+            if (statsInterval) {
+                clearInterval(statsInterval);
+                statsInterval = null;
+            }
+            
+            log('🔌 手动断开连接', 'info');
+        }
+        
+        function subscribe() {
+            if (!okxClient || okxClient.getReadyState() !== WebSocket.OPEN) {
+                log('❌ 请先连接 WebSocket', 'error');
+                return;
+            }
+            
+            const channel = document.getElementById('channel').value;
+            const instId = document.getElementById('instId').value.trim();
+            
+            if (!instId) {
+                log('❌ 请输入交易对', 'error');
+                return;
+            }
+            
+            if (okxClient.subscribe(channel, instId)) {
+                log(`📡 订阅成功: ${channel} - ${instId}`, 'success');
+                updateSubscriptionList();
+            } else {
+                log(`❌ 订阅失败: ${channel} - ${instId}`, 'error');
+            }
+        }
+        
+        function unsubscribe() {
+            if (!okxClient || okxClient.getReadyState() !== WebSocket.OPEN) {
+                log('❌ 请先连接 WebSocket', 'error');
+                return;
+            }
+            
+            const channel = document.getElementById('channel').value;
+            const instId = document.getElementById('instId').value.trim();
+            
+            if (!instId) {
+                log('❌ 请输入交易对', 'error');
+                return;
+            }
+            
+            if (okxClient.unsubscribe(channel, instId)) {
+                log(`📡 取消订阅成功: ${channel} - ${instId}`, 'success');
+                updateSubscriptionList();
+            } else {
+                log(`❌ 取消订阅失败: ${channel} - ${instId}`, 'error');
+            }
+        }
+        
+        function updateSubscriptionList() {
+            if (!okxClient) return;
+            
+            const listElement = document.getElementById('subscriptionList');
+            listElement.innerHTML = '';
+            
+            okxClient.subscriptions.forEach(sub => {
+                const subscription = JSON.parse(sub);
+                const item = document.createElement('div');
+                item.className = 'subscription-item';
+                item.innerHTML = `
+                    <span class="subscription-text">${subscription.channel} - ${subscription.instId}</span>
+                    <button class="remove-subscription" onclick="removeSubscription('${sub}')">删除</button>
+                `;
+                listElement.appendChild(item);
+            });
+        }
+        
+        function removeSubscription(subString) {
+            if (!okxClient) return;
+            
+            const subscription = JSON.parse(subString);
+            okxClient.unsubscribe(subscription.channel, subscription.instId);
+            updateSubscriptionList();
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 OKX WebSocket 高级客户端已初始化', 'info');
+            log('💡 点击"连接"按钮开始连接到 OKX WebSocket API', 'info');
+        });
+    </script>
+</body>
+</html>
